@@ -5,9 +5,12 @@ on:
     branches:
       - main
 
+env:
+  IMAGE: app:staging-${{ github.run_id }}
+
 jobs:
-  deploy:
-    name: Deploy
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
@@ -18,3 +21,23 @@ jobs:
         uses: digitalocean/action-doctl@v2
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Login to DigitalOcean Container Registry
+        run: doctl registry login
+
+      - name: Build, tag, and push image to DigitalOcean Container Registry
+        run: |
+          echo "IMAGE=$IMAGE"
+          docker build . -t registry.digitalocean.com/docker-swarm/$IMAGE -f Dockerfile
+          docker push registry.digitalocean.com/docker-swarm/$IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Configure ssh-agent
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.REMOTE_PRIVATE_KEY }}
+
+      - name: Test
+        env:
+          DOCKER_HOST: ssh://deploy@46.101.144.131
+        run: docker info
