@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  app:
+    image: ${IMAGE}
+    ports:
+      - '8000:8000'
+    command: python -m code.app
+    deploy:
+      replicas: 1
